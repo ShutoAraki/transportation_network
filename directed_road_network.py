@@ -33,7 +33,7 @@ class DirectedRoadGraphGenerator():
         self.edge_filename = edge_filename
         if clean:
             self._cleanRoadData()
-        self.makeDirectedRoadNetwork()
+        self._makeDirectedRoadNetwork()
 
     # ===== Helper functions =====
     def _distanceBetweenLonLats(self, x1,y1,x2,y2):
@@ -97,10 +97,7 @@ class DirectedRoadGraphGenerator():
         self.node_filename = 'data/nodeData-clean-TokyoArea-v2.csv' 
         nodeData.to_csv(self.node_filename, sep=',', encoding='utf-8-sig', index=False)
 
-
-
-    # ===== Clean the data and construct a directed graph =====
-    def makeDirectedRoadNetwork(self, save=True):
+    def _makeDirectedRoadNetwork(self, save=True):
         linkData = pd.read_csv(os.path.join(DATA_PATH, "linkData-clean-TokyoArea-v2.csv"), encoding='utf-8').fillna('')
         nodeData = pd.read_csv(os.path.join(DATA_PATH, "nodeData-clean-TokyoArea-v2.csv"), encoding='utf-8').fillna('')
         ## First make a directed network, then add a reciprical link for non-oneway roads            
@@ -194,12 +191,13 @@ class DirectedRoadGraphGenerator():
         ####### ==================== EXPORT JSON OF NETWORKX ROAD GRAPH ===================
         if save:
             print("==== Writing Road Network File ====")
-            self._writeJSONFile(roadNetwork,'data/roadNetwork-Directed-TokyoArea-v2.json')
+            self._writeJSONFile(roadNetwork,'data/roadNetwork-Directed-TokyoArea-v4.json')
         
 
 def main():
     graph = DirectedRoadGraphGenerator()
-    graph.create_graph(node_filename="nodeData-clean-TokyoArea-v2.csv", edge_filename="linkData-clean-TokyoArea-v2.csv")
+    # graph.create_graph(node_filename="nodeData-clean-TokyoArea-v2.csv", edge_filename="linkData-clean-TokyoArea-v2.csv")
+    graph.create_graph(node_filename="elevationNodeData-TokyoArea-v2.csv", edge_filename="elevationLinkData-TokyoArea-v2.csv")
 
 
 if __name__ == "__main__":
