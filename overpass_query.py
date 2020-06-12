@@ -52,7 +52,6 @@ class GraphDataLoader():
             json.dump(result, f, indent=2)
 
     def _save_result_csv(self, result, kind):
-        now = datetime.now()
         filename = f"data/{kind}Data-{self.area}-v{self.version}.csv"
         
         print(f"Save as {filename}")
@@ -104,18 +103,18 @@ class GraphDataLoader():
 
 # This method might result in 429 code: too many requests due to the rate limit in Overpass API
 # So... take your time!
-def collect_node_data():
-    loader1 = GraphDataLoader(version=2, area='tokyo')
+def collect_node_data(version=2):
+    loader1 = GraphDataLoader(version=version, area='tokyo')
     loader1.execute_query(format='json', node=True)
-    loader2 = GraphDataLoader(version=2, area='chiba')
+    loader2 = GraphDataLoader(version=version, area='chiba')
     loader2.execute_query(format='json', node=True)
-    loader3 = GraphDataLoader(version=2, area='saitama')
+    loader3 = GraphDataLoader(version=version, area='saitama')
     loader3.execute_query(format='json', node=True)
-    loader4 = GraphDataLoader(version=2, area='kanagawa')
+    loader4 = GraphDataLoader(version=version, area='kanagawa')
     loader4.execute_query(format='json', node=True)
 
 
-def aggregate_node_data():
+def aggregate_node_data(version=2):
     # ===== Convert JSON to CSV =====
     wayDataIndex = ['elements.type', 'elements.id','elements.nodes', 'elements.tags.highway', 'elements.tags.name', 'elements.tags.oneway', 'elements.tags.maxspeed', 'elements.tags.width']
     nodeDataIndex = ['elements.type', 'elements.id','elements.lat','elements.lon']
@@ -123,7 +122,7 @@ def aggregate_node_data():
     prefs = ['tokyo', 'chiba', 'saitama', 'kanagawa']
     for pref in prefs:
         print(f"Reading {pref}...")           
-        filename = f"data/allData-{pref}-v2.json"
+        filename = f"data/allData-{pref}-v{version}.json"
         
         osmData2 = []
         
@@ -164,7 +163,7 @@ def aggregate_node_data():
     nodeData4 = pd.read_csv("data/TokyoArea-node-kanagawa.csv", encoding='utf-8').fillna('')
     nodeData = pd.concat([nodeData1,nodeData2,nodeData3,nodeData4])
     nodeData = nodeData.drop(['type'], axis=1)
-    nodeData.to_csv("data/nodeData-TokyoArea-v2.csv", sep=',', encoding='utf-8-sig', index=False)
+    nodeData.to_csv(f"data/nodeData-TokyoArea-v{version}.csv", sep=',', encoding='utf-8-sig', index=False)
 
     linkData1 = pd.read_csv("data/TokyoArea-link-tokyo.csv", encoding='utf-8').fillna('')
     linkData2 = pd.read_csv("data/TokyoArea-link-chiba.csv", encoding='utf-8').fillna('')
@@ -173,7 +172,7 @@ def aggregate_node_data():
     linkData = pd.concat([linkData1,linkData2,linkData3,linkData4])
     linkData = linkData.rename(index=str, columns={"highway": "roadType", "name": "roadName", "oneway": "oneWay", "maxspeed": "speedLimit", "width": "roadWidth"})
     linkData = linkData.drop(['type'], axis=1)
-    linkData.to_csv("data/linkData-TokyoArea-v2.csv", sep=',', encoding='utf-8-sig', index=False)
+    linkData.to_csv(f"data/linkData-TokyoArea-v{version}.csv", sep=',', encoding='utf-8-sig', index=False)
 
 
 def main():

@@ -44,14 +44,16 @@ def load_elevation_data_to_edges(node_data_filename, edge_data_filename, save_lo
         sourceHeight = nodeData[nodeData.id == source].elevation.values[0]
         targetHeight = nodeData[nodeData.id == target].elevation.values[0]
 
-        if not np.isnan(sourceHeight) and not np.isnan(targetHeight):
-            linkData.loc[i, 'elevationGain'] = targetHeight - sourceHeight
-            if i % 1000 == 0:
-                print(f"Found an elevation gain!: {linkData.loc[i, 'elevationGain']} at {i}th row")
-                linkData.to_csv("savepoint_linkElevationData.csv", index=False)
+        # if not np.isnan(sourceHeight) and not np.isnan(targetHeight):
+        linkData.loc[i, 'elevationGain'] = targetHeight - sourceHeight
+        if i % 10000 == 0:
+            print(f"Found an elevation gain!: {linkData.loc[i, 'elevationGain']} at {i}th row")
+            linkData.to_csv("savepoint_linkElevationData.csv", index=False)
+
         
     if save_loc != None:
         linkData.to_csv(save_loc, index=False)
+
 
 
 def main():
@@ -60,7 +62,7 @@ def main():
     # G = readJSONDiGraph(filename)
     # print(type(G))
     # load_elevation_data_to_nodes('data/nodeData-clean-TokyoArea-v2.csv', save_loc='data/elevationNodeData-TokyoArea-v4.csv')
-    load_elevation_data_to_edges('data/elevationNodeData-TokyoArea-v4.csv', 'data/linkData-clean-TokyoArea-v2.csv', save_loc='data/elevationLinkData-TokyoArea-v4.csv')
+    load_elevation_data_to_edges('data/filtered-nodeData-TokyoArea-v5.csv', 'data/filtered-linkData-TokyoArea-v5.csv', save_loc='data/filtered-elevationLinkData-TokyoArea-v5.csv')
 
 
 if __name__ == "__main__":

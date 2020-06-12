@@ -154,7 +154,7 @@ def distanceBetweenLonLats(x1,y1,x2,y2):
 
 def Euclidean_distance(px1,py1, px2, py2):
      return math.sqrt((px2-px1)**2 + (py2-py1)**2)
- 
+
 ####==== Calculate the great circle distance in meters for two lat/lon points
 def haversineDist(lon1, lat1, lon2, lat2):
     # convert decimal degrees to radians 
@@ -177,7 +177,7 @@ def reportRunTime(startTime):
     print("Time to complete:", np.round((time.time() - startTime)/60, decimals=1),"minutes")    
  
 def printProgress(thisStartTime,index,totalNum):
-    oneBlock = makeInt(totalNum / 100)  ## approximately how many are in 1%
+    oneBlck = makeInt(totalNum / 100)  ## approximately how many are in 1%
     if index % oneBlock == 0:
         newStartTime = time.time()
         if newStartTime - thisStartTime < 60:
@@ -552,6 +552,14 @@ def lineElevationProfile(point1, point2, thisName, saveLoc=None):
     #plt.plot(xValues, poly_yValues)
     poly_yValues = getPolynomialFitValues(xValues, yValues)
     plt.plot(xValues, poly_yValues, c=normRGB(30,144,255,0.75), label='Polynomial Fit')  ##blue
+    
+    #--- Straight Line
+    try:
+        slope = (yValues[-1] - yValues[0]) / (xValues[-1] - xValues[0])
+    except ZeroDivisionError:
+        slope = 0
+    line_yValues = [slope * (xValue - xValues[0]) + yValues[0] for xValue in xValues]
+    plt.plot(xValues, line_yValues, label='Straight Line')
     
     ####----Get information about the slopes (using the fitted polynomial)        
     maxSlope, meanSlope, medianSlope, minSlope = getSlopeStats(xValues, poly_yValues)
