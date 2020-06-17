@@ -1,49 +1,103 @@
-import pandas as pd
-import keplergl
-import os
-import json
-from helpers.helperFunctions import readPickleFile, fullFileName
-'''
-node_filename = "data/nodeData-clean-TokyoArea-v2.csv"
-node_df = pd.read_csv(node_filename)
-
-boundaryDict = readPickleFile(fullFileName("Altitude/Elevation5mWindowFiles/boundaryDict.pkl"))
-blocks = []
-for k in boundaryDict.keys():
-    block = pd.DataFrame(boundaryDict[k], index=[k])
-    blocks.append(block)
-block_df = pd.concat(blocks)
-# Cast it to str so that it is JSON serializable
-block_df = block_df.astype({'geometry': 'str'})
-
-kmap = keplergl.KeplerGl(height=400,
-                         data={'elevation_block': block_df, 'node': node_df})
-
-kmap.save_to_html(file_name="elevation_analysis.html")
-'''
-# green_data = pd.read_csv(fullFileName("GreenMap/greenAreasData2-TokyoArea.csv"))
-
-# elevation_data = pd.read_csv("data/elevationLinkData-TokyoArea-v4.csv")
-
-# overall_links = pd.read_csv("data/kepler_viz_data.csv")
-# print("Done loading the data!")
-
-map_config = {
+{
   "version": "v1",
   "config": {
     "visState": {
       "filters": [],
       "layers": [
         {
-          "id": "m51aytg",
+          "id": "6fr04me",
+          "type": "point",
+          "config": {
+            "dataId": "Nodes",
+            "label": "Nodes",
+            "color": [
+              18,
+              147,
+              154
+            ],
+            "columns": {
+              "lat": "lat",
+              "lng": "lon",
+              "altitude": None
+            },
+            "isVisible": True,
+            "visConfig": {
+              "radius": 3,
+              "fixedRadius": False,
+              "opacity": 0.8,
+              "outline": False,
+              "thickness": 2,
+              "strokeColor": None,
+              "colorRange": {
+                "name": "Global Warming",
+                "type": "sequential",
+                "category": "Uber",
+                "colors": [
+                  "#5A1846",
+                  "#900C3F",
+                  "#C70039",
+                  "#E3611C",
+                  "#F1920E",
+                  "#FFC300"
+                ]
+              },
+              "strokeColorRange": {
+                "name": "Global Warming",
+                "type": "sequential",
+                "category": "Uber",
+                "colors": [
+                  "#5A1846",
+                  "#900C3F",
+                  "#C70039",
+                  "#E3611C",
+                  "#F1920E",
+                  "#FFC300"
+                ]
+              },
+              "radiusRange": [
+                0,
+                50
+              ],
+              "filled": True
+            },
+            "hidden": False,
+            "textLabel": [
+              {
+                "field": None,
+                "color": [
+                  255,
+                  255,
+                  255
+                ],
+                "size": 18,
+                "offset": [
+                  0,
+                  0
+                ],
+                "anchor": "start",
+                "alignment": "center"
+              }
+            ]
+          },
+          "visualChannels": {
+            "colorField": None,
+            "colorScale": "quantile",
+            "strokeColorField": None,
+            "strokeColorScale": "quantile",
+            "sizeField": None,
+            "sizeScale": "linear"
+          }
+        },
+        {
+          "id": "lacpl2jt",
           "type": "line",
           "config": {
-            "dataId": "all_roads",
-            "label": "All Roads",
+            "dataId": "Links",
+            "label": "Edges",
             "color": [
-              255,
-              203,
-              153
+              130,
+              154,
+              227
             ],
             "columns": {
               "lat0": "y1",
@@ -54,7 +108,7 @@ map_config = {
             "isVisible": True,
             "visConfig": {
               "opacity": 0.8,
-              "thickness": 4,
+              "thickness": 5,
               "colorRange": {
                 "name": "Uber Viz Qualitative 3",
                 "type": "qualitative",
@@ -116,12 +170,16 @@ map_config = {
       "interactionConfig": {
         "tooltip": {
           "fieldsToShow": {
-            "all_roads": [
-              "roadType",
+            "Links": [
               "x1",
               "y1",
               "x2",
-              "y2"
+              "y2",
+              "elevationGain"
+            ],
+            "Nodes": [
+              "id",
+              "elevation"
             ]
           },
           "enabled": True
@@ -147,14 +205,14 @@ map_config = {
     "mapState": {
       "bearing": 0,
       "dragRotate": False,
-      "latitude": 35.707987625391596,
-      "longitude": 139.72742398788597,
+      "latitude": 35.673800048565425,
+      "longitude": 139.6549358902787,
       "pitch": 0,
-      "zoom": 16.676937620688683,
+      "zoom": 17.51092758122665,
       "isSplit": False
     },
     "mapStyle": {
-      "styleType": "qn3f9ph",
+      "styleType": "wyfcc3q",
       "topLayerGroups": {},
       "visibleLayerGroups": {
         "label": True,
@@ -168,11 +226,11 @@ map_config = {
         185.2988331038727
       ],
       "mapStyles": {
-        "qn3f9ph": {
+        "wyfcc3q": {
           "accessToken": "pk.eyJ1Ijoic2h1dG9hcmFraSIsImEiOiJja2F4bGpwZGgwMXdoMnNwaTZwNzZ1N2ozIn0.4MK9evmXh1eQPTUauJQbMg",
           "custom": True,
           "icon": "https://api.mapbox.com/styles/v1/shutoaraki/ckaxlks630p1s1ilbdw4i26no/static/-122.3391,37.7922,9,0,0/400x300?access_token=pk.eyJ1Ijoic2h1dG9hcmFraSIsImEiOiJja2F4bGpwZGgwMXdoMnNwaTZwNzZ1N2ozIn0.4MK9evmXh1eQPTUauJQbMg&logo=false&attribution=false",
-          "id": "qn3f9ph",
+          "id": "wyfcc3q",
           "label": "Shuto's Classic",
           "url": "mapbox://styles/shutoaraki/ckaxlks630p1s1ilbdw4i26no"
         }
@@ -180,24 +238,3 @@ map_config = {
     }
   }
 }
-
-# Cut the data in half
-# overall_map = keplergl.KeplerGl(height=400,
-#                                 data={"all_roads": overall_links.loc[:, ['roadType', 'x1', 'y1', 'x2', 'y2']]},
-#                                 config=map_config)
-# overall_map.save_to_html(file_name="combined_roads.html")
-
-filename = "data/roadNetwork-Directed-TokyoArea-v5.json"
-with open(filename, encoding='utf-8-sig') as f:
-    js_graph = json.load(f)
-
-elevation_small_roads = pd.DataFrame(js_graph['links']).loc[:, ['x1', 'y1', 'x2', 'y2', 'elevationGain', 'timeWeight', 'roadType']]
-elevation_nodes = pd.DataFrame(js_graph['nodes']).loc[:, ['id', 'lat', 'lon', 'elevation']]
-
-kmap = keplergl.KeplerGl(height=400,
-#                         #  data={'green_data': green_data}) 
-#                         #  data={'elevation_data': elevation_data}) 
-#                          data={'elevation_links': links, 'elevation_nodes': nodes}) 
-                         data={'elevation_small_roads': elevation_small_roads, 'elevation_nodes': elevation_nodes})
-
-kmap.save_to_html(file_name="elevation_gains.html")

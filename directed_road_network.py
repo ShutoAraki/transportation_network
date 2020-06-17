@@ -30,19 +30,16 @@ class DirectedRoadGraphGenerator():
         self.verbose = verbose
         self.version = version
     
-    def create_graph(self, node_filename, edge_filename, clean=False, save=True):
+    def create_graph(self, node_filename, edge_filename, clean=False, save=True, select_primary=True):
         self.node_filename = node_filename
         self.edge_filename = edge_filename
         if clean:
             self._cleanRoadData()
-        self._makeDirectedRoadNetwork(save)
+        self._makeDirectedRoadNetwork(save=save, select_primary=select_primary)
     
     # ===== Helper functions =====
     def _distanceBetweenLonLats(self, x1,y1,x2,y2):
         return np.round(geopy.distance.distance(geopy.Point(y1,x1), geopy.Point(y2,x2)).km, decimals=6)  
-
-    def _makeInt(self, someNumber):
-        return int(np.round(someNumber, decimals=0))
 
     def _writeJSONFile(self, graphData, filePathName):    
         with codecs.open(filePathName, 'w', encoding="utf-8-sig") as jsonFile:
@@ -123,13 +120,15 @@ class DirectedRoadGraphGenerator():
         nodeData.to_csv(self.node_filename, sep=',', encoding='utf-8-sig', index=False)
         print("Node data saved to", self.node_filename)
 
-    def _makeDirectedRoadNetwork(self, save):
+    def _makeDirectedRoadNetwork(self, save, select_primary):
         linkData = pd.read_csv(os.path.join(self.data_path, self.edge_filename), encoding='utf-8').fillna('')
         nodeData = pd.read_csv(os.path.join(self.data_path, self.node_filename), encoding='utf-8').fillna('')
         ## First make a directed network, then add a reciprical link for non-oneway roads            
 
         # Add lane and capacity
         # Large roads
+
+        '''
         lanesByRoadType = {'motorway':3, 'motorway_link':1, 'trunk':2, 'trunk_link':1, 'primary':2, 'primary_link':1, 'secondary':1, 'secondary_link':1, 'tertiary':1, 'tertiary_link':1, 'road':1}
         capacityByRoadType = { 'motorway':24000, 'motorway_link':8000, 'trunk':16000, 'trunk_link':8000, 'primary':8000, 'primary_link':4000, 'secondary':4000, 'secondary_link':4000, 'tertiary':4000,  'tertiary_link':4000, 'road':2000}
         linkData['capacity'] = linkData.apply(lambda row: capacityByRoadType[row.roadType], axis=1)
@@ -141,13 +140,20 @@ class DirectedRoadGraphGenerator():
         ###----ADD THE ROAD TYPE TO THE ROAD NETWORK
         linkData['modality'] = 'road'
         nodeData['modality'] = 'road'
+        '''
             
         ##----Build the network from the road links and remove nodes that are not intersections or endpoints
         ##----NOTE THAT IT IS A DIRECTED GRAPH NOW
         roadNetwork2 = nx.from_pandas_edgelist(linkData, 'source', 'target', True, nx.DiGraph())
-        roadNetwork = roadNetwork2.copy()
+        if select_primary:
+            largest_cc = max(nx.weakly_connected_components(roadNetwork2), key=len)  # A list of node IDs
+            is_member = lambda row: row.source in largest_cc or row.target in largest_cc
+            primary_links = linkData.loc[linkData.apply(is_member, axis=1)]
+            roadNetwork = nx.from_pandas_edgelist(primary_links, 'source', 'target', True, nx.DiGraph())
+        else:
+            roadNetwork = roadNetwork2.copy()
         print("Number of nodes in unfiltered link network:",len(roadNetwork.nodes))
-        numNodes = len(roadNetwork.nodes)
+        # numNodes = len(roadNetwork.nodes)
         
         ##-- Reduce the network by removing nodes that are not intersections
         ##-- The OSM data includes lists of nodes for each road segment, some are just for shape, and some are intersections
@@ -184,10 +190,11 @@ class DirectedRoadGraphGenerator():
             roadNetwork.edges[edge[0],edge[1]]['y1'] = y1
             roadNetwork.edges[edge[0],edge[1]]['x2'] = x2
             roadNetwork.edges[edge[0],edge[1]]['y2'] = y2
-            roadNetwork.edges[edge[0],edge[1]]['distance'] = self._makeInt(distanceBetweenNodes)   
-            roadNetwork.edges[edge[0],edge[1]]['timeWeight'] = np.round(timeWeight, decimals=1)
+            roadNetwork.edges[edge[0],edge[1]]['distance'] = distanceBetweenNodes
+            roadNetwork.edges[edge[0],edge[1]]['timeWeight'] = timeWeight
 
             ##-- Elevation gain calculation
+            '''
             sourceHeight = nodeData.loc[nodeData.id == edge[0]].elevation.values[0]
             targetHeight = nodeData.loc[nodeData.id == edge[1]].elevation.values[0]
             roadNetwork.edges[edge[0],edge[1]]['elevationGain'] = targetHeight - sourceHeight
@@ -199,21 +206,32 @@ class DirectedRoadGraphGenerator():
                 print(f"Target: {edge[1]}; Elevation: {targetHeight}")
                 print(f"Elevation gain: {targetHeight - sourceHeight}")
                 print(f"Type: {type(targetHeight - sourceHeight)}")
+            '''
             
             ####---- Create reciprical links for non-oneway roads
             if edge[2]['oneWay'] == 0:
                 roadNetwork.add_edge(edge[1], edge[0], roadType = edge[2]['roadType'], roadName = edge[2]['roadName'], oneWay = edge[2]['oneWay'], speedLimit = edge[2]['speedLimit'], roadWidth = edge[2]['roadWidth'], driveSpeed = edge[2]['driveSpeed'], x1 = edge[2]['x1'], y1 = edge[2]['y1'], x2 = edge[2]['x2'], y2 = edge[2]['y2'], distance = edge[2]['distance'], timeWeight = edge[2]['timeWeight'], modality = edge[2]['modality'], capacity = edge[2]['capacity'], numLanes = edge[2]['numLanes'])
         
-        #    print(list(roadNetwork.nodes(data=True))[10])
-        #    print(list(roadNetwork.edges(data=True))[10])
-
+        for nodeID in list(roadNetwork.nodes()):
+            roadNetwork.nodes[nodeID]['elevation'] = nodeData.loc[nodeData.id == nodeID].elevation.values[0]
         print("Number of roadNetwork nodes:",len(roadNetwork.nodes))
         print("Number of roadNetwork links:",len(roadNetwork.edges))
         
+        ####### ==================== SELECT THE LARGEST COMPONENT ========================
+        if select_primary:
+            largest_cc = max(nx.weakly_connected_components(roadNetwork), key=len)  # A list of node IDs
+            is_member = lambda row: row.source in largest_cc or row.target in largest_cc
+            primary_links = linkData.loc[linkData.apply(is_member, axis=1)]
+            roadNetwork = nx.from_pandas_edgelist(primary_links, 'source', 'target', True, nx.DiGraph())
+
         ####### ==================== EXPORT JSON OF NETWORKX ROAD GRAPH ===================
         if save:
             print("==== Writing Road Network File ====")
-            json_filename = f'data/roadNetwork-Directed-TokyoArea-with-elevation-v{self.version}.json'
+            if select_primary:
+                json_filename = f'data/roadNetwork-Directed-TokyoArea-primary-v{self.version}.json'
+            else:
+                json_filename = f'data/roadNetwork-Directed-TokyoArea-with-cost-v{self.version}.json'
+            json_filename = f'data/roadNetwork-Directed-TokyoArea-with-cost-v{self.version}.json'
             self._writeJSONFile(roadNetwork, json_filename)
             print("The complete graph file saved at", json_filename)
         self.graph = roadNetwork
@@ -255,8 +273,8 @@ def main():
     #                        edge_filename="filtered-elevationLinkData-TokyoArea-v5.csv",
     #                        clean=False,
     #                        save=True)
-    graph_gen.create_graph(node_filename="filtered-nodeData-TokyoArea-big-road.csv",
-                           edge_filename="filtered-linkData-TokyoArea-big-road.csv",
+    graph_gen.create_graph(node_filename="filtered-nodeData-TokyoArea-v6.csv",
+                           edge_filename="filtered-elevationLinkData-TokyoArea-v6.csv",
                            clean=False,
                            save=True)
     # graph_gen.load_graph("roadNetwork-Directed-TokyoArea-v5.json")

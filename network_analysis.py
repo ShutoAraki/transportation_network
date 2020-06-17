@@ -39,8 +39,9 @@ def load_elevation_data_to_edges(node_data_filename, edge_data_filename, save_lo
     # for i in range(910716, 910721):
     for i in range(N):
         runStartTime = printProgress(runStartTime, i, N)
-        source = linkData.loc[i, 'source']
-        target = linkData.loc[i, 'target']
+        source = linkData.iloc[i, :].loc['source']
+        target = linkData.iloc[i, :].loc['target']
+        # target = linkData.loc[i, 'target']
         sourceHeight = nodeData[nodeData.id == source].elevation.values[0]
         targetHeight = nodeData[nodeData.id == target].elevation.values[0]
 
@@ -62,7 +63,7 @@ def main():
     # G = readJSONDiGraph(filename)
     # print(type(G))
     # load_elevation_data_to_nodes('data/nodeData-clean-TokyoArea-v2.csv', save_loc='data/elevationNodeData-TokyoArea-v4.csv')
-    load_elevation_data_to_edges('data/filtered-nodeData-TokyoArea-v5.csv', 'data/filtered-linkData-TokyoArea-v5.csv', save_loc='data/filtered-elevationLinkData-TokyoArea-v5.csv')
+    load_elevation_data_to_edges('data/filtered-nodeData-TokyoArea-v6.csv', 'data/filtered-linkData-TokyoArea-v6.csv', save_loc='data/filtered-elevationLinkData-TokyoArea-v6.csv')
 
 
 if __name__ == "__main__":

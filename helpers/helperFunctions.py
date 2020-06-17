@@ -18,7 +18,7 @@ import geopandas as gp
 
 from shapely import wkt
 from shapely.geometry import shape
-from shapely.geometry import Point
+from shapely.geometry import Point, MultiPoint
 from shapely.geometry import LineString
 from shapely.geometry.polygon import Polygon
 from shapely.geometry.multipolygon import MultiPolygon
@@ -77,6 +77,11 @@ def convertToGeoPandas(thisData, toCRS=None, forMapping=False):
         thisData = thisData.to_crs(epsg=toCRS)
     gc.collect()
     return thisData
+
+def readJSON(filename):
+    with open(filename, 'r') as f:
+        data = f.read()
+    return eval(data)
 
 def readJSONDiGraph(filename):
     with open(filename, encoding='utf-8-sig') as f:
@@ -152,7 +157,7 @@ def explode(indata):
 def distanceBetweenLonLats(x1,y1,x2,y2):
    return np.round(geopy.distance.distance(geopy.Point(y1,x1), geopy.Point(y2,x2)).m, decimals=0)
 
-def Euclidean_distance(px1,py1, px2, py2):
+def euclideanDistance(px1,py1, px2, py2):
      return math.sqrt((px2-px1)**2 + (py2-py1)**2)
 
 ####==== Calculate the great circle distance in meters for two lat/lon points
@@ -177,7 +182,7 @@ def reportRunTime(startTime):
     print("Time to complete:", np.round((time.time() - startTime)/60, decimals=1),"minutes")    
  
 def printProgress(thisStartTime,index,totalNum):
-    oneBlck = makeInt(totalNum / 100)  ## approximately how many are in 1%
+    oneBlock = makeInt(totalNum / 100)  ## approximately how many are in 1%
     if index % oneBlock == 0:
         newStartTime = time.time()
         if newStartTime - thisStartTime < 60:
@@ -404,6 +409,13 @@ def makeHexMap(theData, theVariable, theVariableName, theColormap, theLegendColo
 #####==================== GETTING ELEVATION DATA ===========================
 ####========================================================================
 
+
+###=== Returns the lowest index closest point's index value from a dataframe of locations to a single point
+def getClosestPoint(originLat, originLon, nodes):
+    dists = np.array([euclideanDistance(originLon, originLat, lon, lat) for lon, lat in zip(nodes.lon, nodes.lat)])
+    return dists.argmin()
+
+
 ###=== Get the 5m elevation for a particular point
 def getLatLonElevation(thisLat, thisLon, thisBoundaryDict):
     thisPoint = Point(thisLon, thisLat)
@@ -493,8 +505,9 @@ def getLineElevations(lat1, lon1, lat2, lon2, thisBoundaryDict, pointInterval = 
         return [0]
     
 ####==== Return the y-values after applying a moving average smoothing operation
-def getMovingAverageValues(Xs, Ys, smoothFactor = 5):
+def getMovingAverageValues(Xs, Ys, windowWidth = 5):
     aveSmooth_yValues = np.array(Ys)
+    smoothFactor = windowWidth // 2
     for i in range(smoothFactor,len(aveSmooth_yValues)-smoothFactor):
         aveSmooth_yValues[i] = np.mean(aveSmooth_yValues[i-smoothFactor:i+smoothFactor])
     return aveSmooth_yValues
