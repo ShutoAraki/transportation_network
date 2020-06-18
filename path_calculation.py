@@ -1,13 +1,15 @@
+import os
 import json
 import time
 import keplergl
 import numpy as np
 import pandas as pd
 import networkx as nx
+from pathlib import Path
 from helpers.helperFunctions import lineElevationProfile, readJSONDiGraph, getSlopeAngle, writeJSONFile, euclideanDistance, normRGB, getMovingAverageValues, getPolynomialFitValues, getClosestPoint, readJSON 
 import matplotlib.pyplot as plt
 # import seaborn as sns
-
+import argparse
 
 def calculate_cost(G, alpha=1.5, factor=2, save_loc=None):
     # TODO: Standardize/normalize the values (the costs are probably too small)
@@ -75,7 +77,7 @@ def plot_graphs(xValues, yValues, title):
     fig, ax = plt.subplots(figsize=(15, 3.5))
     # last_node = len(path) - 1
     # graph.nodes[last_node]
-    plt.yticks(np.arange(min(yValues), max(yValues)+1, 1.0))
+    # plt.yticks(np.arange(min(yValues), max(yValues)+1, 1.0))
     plt.plot(xValues, yValues, c=normRGB(169,169,169,0.75), label='Raw Data')
     plt.plot(xValues, getMovingAverageValues(xValues, yValues), c=normRGB(220,20,60,0.55), label='Moving Average')
     plt.plot(xValues, getPolynomialFitValues(xValues, yValues), c=normRGB(30,144,255,0.75), label='Polynomial Fit')  ##blue
@@ -129,6 +131,7 @@ def generate_shortest_path_df(paths, links):
     result = {}
     index = 1
     # paths: list of lists
+    '''
     for path in paths:
         broken_link = False
         ans = []
@@ -144,6 +147,21 @@ def generate_shortest_path_df(paths, links):
         if not broken_link:
             result[f"path_{index}"] = pd.concat(ans)
             index += 1
+    '''
+    for path in paths:
+        ans = []
+        for i in range(len(path)-1):
+            source = path[i]
+            target = path[i + 1]
+            link = links.loc[(links.source == source) & (links.target == target)]
+            if link.empty:
+                print("Missing link!:", index)
+                link = links.loc[(links.source == target) & (links.target == source)]
+                print(link)
+            ans.append(link)
+        result[f"path_{index}"] = pd.concat(ans)
+        index += 1
+
 
     for path_type, s_path in result.items():
         s_path.loc[:, 'pathId'] = path_type
@@ -164,7 +182,7 @@ def kepler_viz(link_df, name, title="", config=None):
     kmap.save_to_html(file_name=f"{title}.html")
 
 
-def test_points():
+def test_points(alpha, factor):
 
     firstPoint = [35.664947, 139.704976]    ### Aaron's home
     secondPoint = [35.659180, 139.700703]   ### Shibuya Station
@@ -181,18 +199,16 @@ def test_points():
     thirteenthPoint = [35.709231, 139.727571] ### Shuto's home
     fourteenthPoint = [35.706521, 139.710016] ### Shuto's Hight School
 
-    # listOfPairs = [(firstPoint,secondPoint,"Home to Shibuya Station"),(firstPoint,thirdPoint,"Home to Roppongi Grand Tower"),(firstPoint,forthPoint,"Home to Ebisu Office"),(firstPoint,fifthPoint,"Home to Tokyo Station"),(secondPoint,thirdPoint,"Shibuya Station to Roppongi Grand Tower"),(secondPoint,forthPoint,"Shibuya Station to Ebisu Office"),(sixthPoint,seventhPoint,"Tamachi Station to Daiba Station"),(secondPoint,eighthPoint,"Shibuya Station to Tokyo Disney"),(eleventhPoint,twelfthPoint,"Friends Home to Shimura Sakaue Station"),(thirteenthPoint,fourteenthPoint,"Shuto's Home to Toyama HS")]
+    listOfPairs = [(firstPoint,secondPoint,"Home to Shibuya Station"),(firstPoint,thirdPoint,"Home to Roppongi Grand Tower"),(firstPoint,forthPoint,"Home to Ebisu Office"),(firstPoint,fifthPoint,"Home to Tokyo Station"),(secondPoint,thirdPoint,"Shibuya Station to Roppongi Grand Tower"),(secondPoint,forthPoint,"Shibuya Station to Ebisu Office"),(sixthPoint,seventhPoint,"Tamachi Station to Daiba Station"),(secondPoint,eighthPoint,"Shibuya Station to Tokyo Disney"),(eleventhPoint,twelfthPoint,"Friends Home to Shimura Sakaue Station"),(thirteenthPoint,fourteenthPoint,"Shuto's Home to Toyama HS")]
     # listOfPairs = [(firstPoint,secondPoint,"Home to Shibuya Station"), (eleventhPoint,twelfthPoint,"Friends Home to Shimura Sakaue Station"),(firstPoint,fifthPoint,"Home to Tokyo Station"),(thirteenthPoint,fourteenthPoint,"Shuto's Home to Toyama HS")]
-    listOfPairs = [(firstPoint,secondPoint,"Home to Shibuya Station")]
+    # listOfPairs = [(firstPoint,secondPoint,"Home to Shibuya Station")]
 
     # filename = "data/roadNetwork-combined-with-cost-v6.json"
-    filename = "data/roadNetwork-Directed-TokyoArea-primary-v6.json"
+    filename = "data/roadNetwork-Directed-TokyoArea-with-cost-v6.json"
     G = readJSONDiGraph(filename)
     # G = G.to_undirected()
     print("Done loading the graph!")
 
-    alpha = 1.5
-    factor = 2 
     nodes = pd.DataFrame([{'id': node[0], **node[1]} for node in list(G.nodes(data=True))])
     G = calculate_cost(G, alpha=alpha, factor=factor)
     print("Done calculating the weights!")
@@ -211,11 +227,17 @@ def test_points():
         path = nx.dijkstra_path(G, sourceId, targetId, weight='cost')
         paths.append(path)
         # lineElevationProfile(source, target, title, saveLoc=f"data/lineElevation-{title}")
-        pathElevationProfile(G, path, title=title, save_loc=f"data/pathElevation-{title}-alpha:{alpha}|factor:{factor}")
+        
+        save_dir = f"data/elevation_profiles/alpha={alpha}/u={factor}/"
+        save_loc = f"data/elevation_profiles/alpha={alpha}/u={factor}/pathElevation-{title}-alpha:{alpha}|u:{factor}" 
+        save_loc = os.path.join(save_dir, f"pathElevation-{title}-alpha:{alpha}|u:{factor}")
+        # if the folder does not exist, create one
+        Path(save_dir).mkdir(parents=True, exist_ok=True)
+        pathElevationProfile(G, path, title=title, save_loc=save_loc)
 
         # Do it again in reverse just in case the directedness does not help
-        path = nx.dijkstra_path(G, targetId, sourceId, weight='cost')
-        paths.append(path)
+        # path = nx.dijkstra_path(G, targetId, sourceId, weight='cost')
+        # paths.append(path)
 
         print("--Completed Path Analysis and Plotting in",np.round((time.time()-pairStartTime),2),"seconds")
     
@@ -224,12 +246,21 @@ def test_points():
     links = pd.DataFrame(js_graph['links'])
     map_config = readJSON("shortest_path_config.txt")
     shortest_paths = generate_shortest_path_df(paths, links)
-    shortest_paths.to_csv("data/shortest_paths.csv", index=False)
+    shortest_paths.to_csv(f"data/shortest_paths-alpha:{alpha}|u:{factor}.csv", index=False)
     # kepler_viz(shortest_paths, "shortest_paths")
-    kepler_viz(shortest_paths, "shortest_paths", config=map_config)
+    kepler_viz(shortest_paths, name="shortest_paths", title=f"shortest_paths-alpha:{alpha}|u:{factor}", config=map_config)
     
     
 def main():
+    parser = argparse.ArgumentParser(description='Choose hyperparameters alpha and u')
+    parser.add_argument('-a', type=float, default=1.5,
+                    help='How bad are slopes in general')
+    parser.add_argument('-u', type=float, default=2.0,
+                    help='How much you hate walking uphill compared to downhill')
+    args = parser.parse_args()
+    alpha = args.a
+    factor = args.u
+
     # Random example
     # A = 1094016285 # my apartment
     # B = 393130770 # near my high school
@@ -270,7 +301,7 @@ def main():
     # print("PATH:", path)
     # pathElevationProfile(G, path, title="My home to high school")
 
-    test_points()
+    test_points(alpha=alpha, factor=factor)
 
 
 if __name__ == "__main__":
