@@ -2,7 +2,22 @@
   "version": "v1",
   "config": {
     "visState": {
-      "filters": [],
+      "filters": [
+        {
+          "dataId": [
+            "shortest_paths"
+          ],
+          "id": "6mq2zwo3d",
+          "name": [
+            "pathId"
+          ],
+          "type": "multiSelect",
+          "value": [],
+          "enlarged": False,
+          "plotType": "histogram",
+          "yAxis": None
+        }
+      ],
       "layers": [
         {
           "id": "lshv6h8",
@@ -108,7 +123,7 @@
             "isVisible": True,
             "visConfig": {
               "opacity": 0.8,
-              "thickness": 7,
+              "thickness": 17,
               "colorRange": {
                 "name": "Uber Viz Qualitative 3",
                 "type": "qualitative",
@@ -200,10 +215,10 @@
     "mapState": {
       "bearing": 0,
       "dragRotate": False,
-      "latitude": 35.63233606265158,
-      "longitude": 139.77581330059039,
+      "latitude": 35.700295608058106,
+      "longitude": 139.76963911398036,
       "pitch": 0,
-      "zoom": 10.424908073782587,
+      "zoom": 11.20262850235482,
       "isSplit": False
     },
     "mapStyle": {

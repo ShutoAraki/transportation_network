@@ -217,13 +217,6 @@ class DirectedRoadGraphGenerator():
         print("Number of roadNetwork nodes:",len(roadNetwork.nodes))
         print("Number of roadNetwork links:",len(roadNetwork.edges))
         
-        ####### ==================== SELECT THE LARGEST COMPONENT ========================
-        if select_primary:
-            largest_cc = max(nx.weakly_connected_components(roadNetwork), key=len)  # A list of node IDs
-            is_member = lambda row: row.source in largest_cc or row.target in largest_cc
-            primary_links = linkData.loc[linkData.apply(is_member, axis=1)]
-            roadNetwork = nx.from_pandas_edgelist(primary_links, 'source', 'target', True, nx.DiGraph())
-
         ####### ==================== EXPORT JSON OF NETWORKX ROAD GRAPH ===================
         if save:
             print("==== Writing Road Network File ====")
@@ -231,7 +224,6 @@ class DirectedRoadGraphGenerator():
                 json_filename = f'data/roadNetwork-Directed-TokyoArea-primary-v{self.version}.json'
             else:
                 json_filename = f'data/roadNetwork-Directed-TokyoArea-with-cost-v{self.version}.json'
-            json_filename = f'data/roadNetwork-Directed-TokyoArea-with-cost-v{self.version}.json'
             self._writeJSONFile(roadNetwork, json_filename)
             print("The complete graph file saved at", json_filename)
         self.graph = roadNetwork
