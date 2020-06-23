@@ -30,25 +30,11 @@ app.add_middleware(
         allow_headers=["*"]
         )
 
-'''
-class Item(BaseModel):
-    name: str
-    price: float
-    is_offer: bool = None
+def readJSON(filename):
+    with open(filename, 'r') as f:
+        data = f.read()
+    return data
 
-
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: str = None):
-    return {"item_id": item_id, "q": q}
-
-@app.put("/items/{item_id}")
-def update_item(item_id: int, item: Item):
-    return {"item_name": item.name, "item_id": item_id}
-'''
 @app.get("/fetch")
 def read_files():
     cwd = os.getcwd()
@@ -56,15 +42,26 @@ def read_files():
     result = glob.glob(csv_files)
     filenames = [os.path.split(file_path)[-1] for file_path in result]
     ans_dict = [{'id': index, 'name': name} for index, name in enumerate(filenames)]
+    
+    default_config = readJSON("./data/kepler_configs/defaultConfig.json")
+    for d in ans_dict:
+        if 'crime' in d['name'].lower():
+            crime_config = readJSON("./data/kepler_configs/crimeConfig.json")
+            d['config'] = crime_config
+        else:
+            d['config'] = default_config
+
     return {"filenames": ans_dict}
 
 # Fetch data
 @app.get("/fetch/{data_name}")
 async def fetch_data(data_name: str):
     if data_name[-4:] == '.csv':
-        filename = f"file:///Users/s_araki/local_dev/data/{data_name}"
+        # filename = f"file:///Users/s_araki/local_dev/data/{data_name}"
+        filename = f"./data/{data_name}"
     else:
-        filename = f"file:///Users/s_araki/local_dev/data/{data_name}.csv"
+        filename = f"./data/{data_name}.csv"
+
     dataset = pd.read_csv(filename)
     stream = io.StringIO()
     if 'node' in data_name:
@@ -75,8 +72,7 @@ async def fetch_data(data_name: str):
     #dataset.to_json(stream)
 
     response = StreamingResponse(iter([stream.getvalue()]),
-                                 media_type="text/csv"
-                                )
+                                 media_type="text/csv")
 
     response.headers["Content-Disposition"] = f"attachment; filename={data_name}.csv"
 
