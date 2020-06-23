@@ -1,3 +1,13 @@
+"""
+This API throws processed data back to frontend.
+Put this file under the same level directory as your "data" directory.
+
+@author: ShutoAraki
+@date: 06/23/2020
+"""
+
+import os
+import glob
 import io
 import numpy as np
 import pandas as pd
@@ -39,16 +49,28 @@ def read_item(item_id: int, q: str = None):
 def update_item(item_id: int, item: Item):
     return {"item_name": item.name, "item_id": item_id}
 '''
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
+@app.get("/fetch")
+def read_files():
+    cwd = os.getcwd()
+    csv_files = os.path.join(cwd, "data/*.csv")
+    result = glob.glob(csv_files)
+    filenames = [os.path.split(file_path)[-1] for file_path in result]
+    ans_dict = [{'id': index, 'name': name} for index, name in enumerate(filenames)]
+    return {"filenames": ans_dict}
 
 # Fetch data
 @app.get("/fetch/{data_name}")
 async def fetch_data(data_name: str):
-    dataset = pd.read_csv(f"file:///Users/s_araki/local_dev/data/{data_name}.csv")
+    if data_name[-4:] == '.csv':
+        filename = f"file:///Users/s_araki/local_dev/data/{data_name}"
+    else:
+        filename = f"file:///Users/s_araki/local_dev/data/{data_name}.csv"
+    dataset = pd.read_csv(filename)
     stream = io.StringIO()
-    dataset = dataset.loc[:, ['lat', 'lon']]
+    if 'node' in data_name:
+        dataset = dataset.loc[:, ['lat', 'lon']]
+    # elif 'link' in data_name:
+    #     dataset = dataset.loc[:, ['x1', 'y1', 'x2', 'y2']]
     dataset.to_csv(stream, index = False)
     #dataset.to_json(stream)
 
