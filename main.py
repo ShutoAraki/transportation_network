@@ -8,6 +8,7 @@ Put this file under the same level directory as your "data" directory.
 
 import os
 import glob
+import pickle
 import io
 import numpy as np
 import pandas as pd
@@ -15,6 +16,10 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+import time
+
+DATA_DIR = "api_data"
 
 app = FastAPI()
 
@@ -30,50 +35,122 @@ app.add_middleware(
         allow_headers=["*"]
         )
 
+class DataColumn(BaseModel):
+    selectedColumns: list
+
 def readJSON(filename):
     with open(filename, 'r') as f:
         data = f.read()
     return data
 
+def readPickleFile(filePathName):
+    with open (filePathName, 'rb') as fp:
+        return pickle.load(fp)
+
+
 @app.get("/fetch")
 def read_files():
+    startTime = time.time()
     cwd = os.getcwd()
-    csv_files = os.path.join(cwd, "data/*.csv")
+    csv_files = os.path.join(cwd, f"{DATA_DIR}/*.csv")
     result = glob.glob(csv_files)
     filenames = [os.path.split(file_path)[-1] for file_path in result]
-    ans_dict = [{'id': index, 'name': name} for index, name in enumerate(filenames)]
+    ans_dict = [{'id': index, 'name': name[:-4]} for index, name in enumerate(filenames)]
     
-    default_config = readJSON("./data/kepler_configs/defaultConfig.json")
+    default_config = readJSON(f"./{DATA_DIR}/kepler_configs/defaultConfig.json")
     for d in ans_dict:
-        if 'crime' in d['name'].lower():
-            crime_config = readJSON("./data/kepler_configs/crimeConfig.json")
-            d['config'] = crime_config
+        filename = d['name'].lower()
+        if 'crime' in filename:
+            d['config'] = readJSON(f"./{DATA_DIR}/kepler_configs/crimeConfig.json")
+        elif 'green' in filename:
+            d['config'] = readJSON(f"./{DATA_DIR}/kepler_configs/greenMapConfig.json")
         else:
             d['config'] = default_config
+        full_filename = result[d['id']]
+        d['all_columns'] = pd.read_csv(full_filename, nrows=1).columns.tolist()
+
+    print(f"Initial fetch took {time.time() - startTime} secs")
 
     return {"filenames": ans_dict}
 
+
 # Fetch data
-@app.get("/fetch/{data_name}")
-async def fetch_data(data_name: str):
+@app.get("/fetch/{data_info}")
+async def fetch_data(data_info: str):
+    startTime = time.time()
+
+    is_pickle = False
+    data_list = data_info.split('|')
+    if len(data_list) != 2:
+        print("Invalid data format:\n", data_list)
+    data_name, cols = data_list[0], data_list[1].split(',')
     if data_name[-4:] == '.csv':
         # filename = f"file:///Users/s_araki/local_dev/data/{data_name}"
-        filename = f"./data/{data_name}"
+        pickle_name = data_name[:-4] + '.pkl'
+        if os.path.exists(pickle_name):
+            is_pickle = True
+            filename = f"./{DATA_DIR}/{pickle_name}"
+        else:
+            filename = f"./{DATA_DIR}/{data_name}"
     else:
-        filename = f"./data/{data_name}.csv"
+        if os.path.exists(data_name + '.pkl'):
+            is_pickle = True
+            filename = f"./{DATA_DIR}/{data_name}.pkl"
+        else:
+            filename = f"./{DATA_DIR}/{data_name}.csv"
 
-    dataset = pd.read_csv(filename)
     stream = io.StringIO()
-    if 'node' in data_name:
-        dataset = dataset.loc[:, ['lat', 'lon']]
-    # elif 'link' in data_name:
-    #     dataset = dataset.loc[:, ['x1', 'y1', 'x2', 'y2']]
-    dataset.to_csv(stream, index = False)
-    #dataset.to_json(stream)
-
+    if 'all' in cols:
+        if is_pickle:
+            dataset = readPickleFile(filename)
+        else:
+            dataset = pd.read_csv(filename)
+    else:
+        if is_pickle:
+            allDF = readPickleFile(filename)
+            dataset = allDF.loc[:, cols]
+        else:
+            dataset = pd.read_csv(filename, usecols=cols)
+    dataset.to_csv(stream, index=False)
     response = StreamingResponse(iter([stream.getvalue()]),
                                  media_type="text/csv")
-
     response.headers["Content-Disposition"] = f"attachment; filename={data_name}.csv"
 
+    print(f"Loading {len(dataset.columns)} columns from {data_name} took {time.time() - startTime} secs.")
+
     return response
+
+# Client throws something like this
+#“/selective_fetch/[“example.csv:lat”,”example.csv:lat”,”another.csv:green”]”
+# @app.get("/selective_fetch/{data_name}")
+# async def fetch_data_selectively(data_name: str):
+
+
+@app.post("/columns/")
+async def select_by_columns(request: DataColumn):
+    # The respnose dict is {'selectedColumns': ['example.csv:[]']}
+    columns = request.dict()
+    print(columns)
+    for full_col_name in columns['selectedColumns']:
+        broken_down = full_col_name.split(':')
+        if len(broken_down) != 2:
+            print("Invalid column naming =>", full_col_name)
+        filename, colname = broken_down[0], broken_down[1]
+        # Create a dict entry for filename -> [colnames]
+        if filename in columns:
+            columns[filename].add(colname)
+        else:
+            columns[filename] = {colname}
+    del columns['selectedColumns']
+
+    # Load the right csv and return the DataFrame
+    '''
+    totalDF = pd.concat([pd.read_csv(f"data/{filename}").loc[:, colnames] for filename, colnames in columns.items()])
+    stream = io.StringIO() 
+    totalDF.to_csv(stream, index=False)
+    response = StreamingResponse(iter([stream.getvalue()]),
+                                 media_type="text/csv")
+    response.headers["Content-Disposition"] = f"attachment; filename=total_data.csv"
+    return response
+    '''
+    return columns

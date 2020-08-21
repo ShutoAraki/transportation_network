@@ -41,7 +41,7 @@ class DirectedRoadGraphGenerator():
     def _distanceBetweenLonLats(self, x1,y1,x2,y2):
         return np.round(geopy.distance.distance(geopy.Point(y1,x1), geopy.Point(y2,x2)).km, decimals=6)  
 
-    def _writeJSONFile(self, graphData, filePathName):    
+    def _writeJSONFile(self, graphData, filePathName):
         with codecs.open(filePathName, 'w', encoding="utf-8-sig") as jsonFile:
             jsonFile.write(json.dumps(nx.readwrite.json_graph.node_link_data(graphData), cls = MyEncoder))
 
