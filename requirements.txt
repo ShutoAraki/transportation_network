@@ -22,7 +22,7 @@ distributed==2.18.0
 EasyProcess==0.3
 entrypoint2==0.2.1
 entrypoints==0.3
-fastapi==0.58.0
+fastapi==0.65.2
 Fiona==1.8.13.post1
 fsspec==0.7.4
 geographiclib==1.50
