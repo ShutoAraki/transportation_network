@@ -18,7 +18,7 @@ dask==2.18.0
 dataclasses==0.7
 decorator==4.4.2
 defusedxml==0.6.0
-distributed==2.18.0
+distributed==2021.10.0
 EasyProcess==0.3
 entrypoint2==0.2.1
 entrypoints==0.3
