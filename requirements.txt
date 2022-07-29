@@ -56,7 +56,7 @@ MarkupSafe==1.1.1
 matplotlib==3.2.1
 mccabe==0.6.1
 mercantile==1.1.4
-mistune==0.8.4
+mistune==2.0.3
 msgpack==1.0.0
 mss==5.1.0
 munch==2.5.0
